@@ -39,11 +39,9 @@ async function buildMergedRules() {
                             if (nextId > MAX_TOTAL_RULES || listCount >= MAX_RULES_PER_LIST) break;
 
                             // BANNER AD OPTIMIZATION:
-                            // Safely extend rules to catch image-based banner ads
+                            // Ensure the rule applies to image and object types if not specified
                             if (!rule.condition.resourceTypes) {
-                                rule.condition.resourceTypes = ['image', 'object'];
-                            } else if (!rule.condition.resourceTypes.includes('image')) {
-                                rule.condition.resourceTypes.push('image');
+                                rule.condition.resourceTypes = ['image', 'object', 'sub_frame', 'script'];
                             }
 
                             rule.id = nextId++;
