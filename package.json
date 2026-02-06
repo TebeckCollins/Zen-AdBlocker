@@ -1,0 +1,17 @@
+{
+  "name": "my-adblocker",
+  "version": "1.0.1",
+  "description": "",
+  "main": "build-rules.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@eyeo/abp2dnr": "^1.3.1",
+    "node-fetch": "^3.3.2"
+  }
+}

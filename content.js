@@ -1,0 +1,189 @@
+// Content script for cleanup of dynamically-injected content, broken iframes, and ad redirects
+// Primary ad blocking is handled by Declarative Net Request (DNR) rules
+// This script respects the current enabled/disabled state and listens for changes
+
+let isExtensionActive = false;
+let isWhitelisted = false;
+let _thornObserver = null;
+let _thornClickListener = null;
+let _processingScheduled = false;
+const PROCESS_DEBOUNCE_MS = 700;
+
+// Initialize state from storage
+function initializeState() {
+    chrome.storage.local.get(['enabled', 'allowlist'], (data) => {
+        isExtensionActive = data.enabled !== false; // Default to true
+        isWhitelisted = (data.allowlist || []).includes(window.location.hostname);
+        
+        console.log(`🛡️ Thorn content script initialized - Enabled: ${isExtensionActive}, Whitelisted: ${isWhitelisted}`);
+        
+        if (isExtensionActive && !isWhitelisted) {
+            startShield();
+        } else {
+            stopShield();
+        }
+    });
+}
+
+// Listen for storage changes (when user toggles extension on/off)
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local') {
+        if (changes.enabled) {
+            isExtensionActive = changes.enabled.newValue !== false;
+            console.log(`🔄 Extension toggled ${isExtensionActive ? 'ON' : 'OFF'}`);
+            if (isExtensionActive && !isWhitelisted) {
+                startShield();
+            } else {
+                stopShield();
+            }
+        }
+        if (changes.allowlist) {
+            isWhitelisted = (changes.allowlist.newValue || []).includes(window.location.hostname);
+            console.log(`🔄 Whitelist updated - This site whitelisted: ${isWhitelisted}`);
+        }
+    }
+});
+
+// Initialize on first load
+initializeState();
+
+function startShield() {
+    if (!isExtensionActive || isWhitelisted) return;
+    if (_thornObserver) return; // already started
+    // Prevent ads from redirecting the page
+    const preventAdRedirects = () => {
+        // Attach a namespaced listener (saved to remove later)
+        if (_thornClickListener) return;
+        _thornClickListener = function (e) {
+            const target = e.target && e.target.closest && e.target.closest('a, button, [onclick]');
+            if (!target) return;
+
+            // Check if click target is likely an ad
+            const href = target.getAttribute('href') || '';
+            const onclick = target.getAttribute('onclick') || '';
+            const classList = target.className || '';
+
+            const isLikelyAd = /ad|ads|advertisement|click|doubleclick|googleadservices|outbrain|taboola/i.test(
+                href + classList + onclick
+            );
+
+            if (isLikelyAd && href && !href.startsWith(window.location.origin)) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🛡️ Blocked ad redirect to:', href);
+            }
+        };
+        document.addEventListener('click', _thornClickListener, true);
+    };
+
+    // Hide broken/empty iframes and track count
+    const removeEmptyIframes = () => {
+        let count = 0;
+        try {
+            document.querySelectorAll('iframe').forEach(iframe => {
+                try {
+                    if (( !iframe.src || iframe.src === 'about:blank' ) && iframe.dataset && iframe.dataset.thornBlocked !== '1') {
+                        iframe.style.display = 'none';
+                        iframe.dataset.thornBlocked = '1';
+                        count++;
+                    }
+                } catch (inner) { /* ignore cross-origin */ }
+            });
+            if (count > 0) {
+                reportBlockedContent(count, 'iframes');
+            }
+        } catch (e) {
+            // Silently ignore errors from cross-origin restrictions
+        }
+    };
+
+    // Track ad containers that exist but are empty (blocked by DNR)
+    const trackBlockedAdContainers = () => {
+        let count = 0;
+        const adSelectors = [
+            '.adsbygoogle',
+            '[id^="google_ads_"]',
+            '.ad-container',
+            '.ad-slot',
+            '.advertisement',
+            '[class*="ad-space"]',
+            '[id*="ad-"]'
+        ];
+
+        try {
+            document.querySelectorAll(adSelectors.join(', ')).forEach(element => {
+                try {
+                    // Skip elements already reported
+                    if (element.dataset && element.dataset.thornBlocked === '1') return;
+
+                    const style = window.getComputedStyle(element);
+                    const isEmpty = (element.offsetHeight === 0) || (style && style.display === 'none' );
+                    if (isEmpty) {
+                        element.dataset.thornBlocked = '1';
+                        count++;
+                    }
+                } catch (inner) { /* ignore cross-origin or render errors */ }
+            });
+            if (count > 0) {
+                reportBlockedContent(count, 'containers');
+            }
+        } catch (e) {
+            // Silently ignore
+        }
+    };
+
+    // Report blocked content to background script
+    const reportBlockedContent = (count, type) => {
+        try {
+            console.log(`📊 Reporting ${count} blocked ${type}`);
+            chrome.runtime.sendMessage({
+                action: "updateCount",
+                count: count,
+                type: type
+            });
+        } catch (error) {
+            // Extension context may have been invalidated
+            console.error('❌ Error reporting blocked content:', error);
+        }
+    };
+
+    // Process both iframe and ad container checks together
+    const processDOM = () => {
+        if (!isExtensionActive || isWhitelisted) return;
+        removeEmptyIframes();
+        trackBlockedAdContainers();
+    };
+
+    const scheduleProcessing = () => {
+        if (_processingScheduled) return;
+        _processingScheduled = true;
+        setTimeout(() => {
+            _processingScheduled = false;
+            processDOM();
+        }, PROCESS_DEBOUNCE_MS);
+    };
+
+    // Prevent ad redirects on page load
+    preventAdRedirects();
+
+    // Initial cleanup and observe for dynamically added content
+    processDOM();
+    _thornObserver = new MutationObserver(scheduleProcessing);
+    _thornObserver.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+function stopShield() {
+    // Disconnect observer and remove click listener
+    try {
+        if (_thornObserver) {
+            _thornObserver.disconnect();
+            _thornObserver = null;
+        }
+        if (_thornClickListener) {
+            document.removeEventListener('click', _thornClickListener, true);
+            _thornClickListener = null;
+        }
+    } catch (e) {
+        console.error('❌ Error stopping shield:', e);
+    }
+}

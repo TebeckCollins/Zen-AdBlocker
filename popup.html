@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { width: 300px; font-family: 'Segoe UI', sans-serif; padding: 15px; background: #f9f9f9; }
+    
+    /* Header Status */
+    .status-box { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px; border: 1px solid #c3e6cb; position: relative; }
+    h2 { margin: 0; font-size: 18px; }
+    .counter-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; display: block; opacity: 0.8; }
+    .counter-value { font-size: 24px; font-weight: bold; display: block; }
+
+    /* The Toggle Switch Container */
+    .toggle-container { margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    
+    /* Toggle Switch Logic */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: #2ecc71; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    /* The Buttons */
+    .cta-button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; font-size: 13px; text-decoration: none; display: inline-block; box-sizing: border-box; text-align: center; margin-bottom: 5px; }
+    .cta-button:hover { background: #0056b3; }
+    .secondary-btn { background: #02863e; }
+    .secondary-btn:hover { background: #5a6268; }
+
+    /* The Money Maker Section */
+    .promo-box { background: #fff; border: 1px solid #ddd; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .promo-title { font-weight: bold; color: #333; font-size: 14px; margin-bottom: 8px; }
+    .promo-text { font-size: 12px; color: #666; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="status-box" id="statusBox">
+    <h2 id="statusTitle">Shield is Active</h2>
+    
+    <div class="toggle-container">
+        <span style="font-size: 12px;">Protection</span>
+        <label class="switch">
+          <input type="checkbox" id="toggleBlocker" checked>
+          <span class="slider"></span>
+        </label>
+    </div>
+
+    <span class="counter-label">Ads blocked on this page</span>
+    <span class="counter-value" id="count">0</span>
+  </div>
+  
+  <button id="whitelistBtn" class="cta-button secondary-btn">
+    Trust This Website
+  </button>
+
+  <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+
+  <div class="promo-box">
+    <div class="promo-title">Your IP is still exposed</div>
+    <div class="promo-text">Adblocking doesn't hide your location. Use a VPN to stay truly anonymous.</div>
+    
+    <a href="#" id="vpnLink" class="cta-button">
+      Get 70% Off NordVPN
+    </a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
