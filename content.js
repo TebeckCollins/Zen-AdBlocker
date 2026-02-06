@@ -8,6 +8,7 @@ let _thornObserver = null;
 let _thornClickListener = null;
 let _processingScheduled = false;
 const PROCESS_DEBOUNCE_MS = 700;
+const STYLE_ID = 'zen-adblocker-style';
 
 // Initialize state from storage
 function initializeState() {
@@ -107,7 +108,14 @@ function startShield() {
             '.ad-slot',
             '.advertisement',
             '[class*="ad-space"]',
-            '[id*="ad-"]'
+            '[id*="ad-"]',
+            '.ad',
+            '.ads',
+            '.sponsored',
+            '.sponsored-content',
+            '.promoted',
+            '[data-ad]',
+            '[data-adsense]'
         ];
 
         try {
@@ -130,6 +138,31 @@ function startShield() {
         } catch (e) {
             // Silently ignore
         }
+    };
+
+    // Inject lightweight CSS rules to hide common ad containers early
+    const injectHideStyles = () => {
+        if (document.getElementById(STYLE_ID)) return;
+        try {
+            const style = document.createElement('style');
+            style.id = STYLE_ID;
+            const selectors = [
+                '.ad', '.ads', '.adsbygoogle', '.ad-container', '.ad-slot', '.advertisement',
+                '.sponsored', '.sponsored-content', '.promoted', '[data-ad]', '[data-adsense]',
+                '[id^="google_ads_"]', '[class*="ad-"]', '[class*="-ad"]', '[id*="-ad"]'
+            ];
+            style.textContent = selectors.join(', ') + ' { display: none !important; visibility: hidden !important; }';
+            (document.head || document.documentElement).appendChild(style);
+        } catch (e) {
+            // ignore
+        }
+    };
+
+    const removeHideStyles = () => {
+        try {
+            const el = document.getElementById(STYLE_ID);
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        } catch (e) { /* ignore */ }
     };
 
     // Report blocked content to background script
@@ -167,6 +200,8 @@ function startShield() {
     preventAdRedirects();
 
     // Initial cleanup and observe for dynamically added content
+    // Inject CSS to catch cosmetic elements early
+    injectHideStyles();
     processDOM();
     _thornObserver = new MutationObserver(scheduleProcessing);
     _thornObserver.observe(document.documentElement, { childList: true, subtree: true });
@@ -182,6 +217,9 @@ function stopShield() {
         if (_thornClickListener) {
             document.removeEventListener('click', _thornClickListener, true);
             _thornClickListener = null;
+        }
+        // Remove injected CSS
+        removeHideStyles();
         }
     } catch (e) {
         console.error('❌ Error stopping shield:', e);
