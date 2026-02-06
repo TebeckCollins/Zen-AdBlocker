@@ -1,0 +1,5 @@
+# Ensure consistent line endings for README
+README.md text eol=lf
+
+# Recommended defaults
+* text=auto
