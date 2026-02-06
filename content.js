@@ -220,7 +220,6 @@ function stopShield() {
         }
         // Remove injected CSS
         removeHideStyles();
-        }
     } catch (e) {
         console.error('❌ Error stopping shield:', e);
     }
