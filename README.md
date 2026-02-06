@@ -13,9 +13,9 @@ A lightweight, privacy-focused Chrome extension that blocks ads and trackers usi
 
 ## Installation
 1. Download or clone this repository:
-   ```bash
-  git clone https://github.com/your-username/Zen-AdBlocker.git
-   ```
+```bash
+git clone https://github.com/your-username/Zen-AdBlocker.git
+```
 2. Go to `chrome://extensions` in your browser
 3. Enable "Developer mode"
 4. Click "Load unpacked" and select the project folder
