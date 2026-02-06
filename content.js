@@ -115,7 +115,23 @@ function startShield() {
             '.sponsored-content',
             '.promoted',
             '[data-ad]',
-            '[data-adsense]'
+            '[data-adsense]',
+            'iframe[id^="google_ads_frame"]',
+            'embed[type="application/x-shockwave-flash"]',
+            'object[classid]',
+            'img[src*="doubleclick.net"]',
+            'img[src*="ad-delivery"]',
+            'img[src*="doubleclick"]',
+            'img[src*="criteo"]',
+            'img[src*="gumgum"]',
+            '.taboola-ad',
+            '.outbrain-ad',
+            '.banner', '.banner-ad', '.header-banner', '.top-banner',
+            '.sidebar-ads', '.side-ads', '.right-sidebar',
+            '.leaderboard', '.skyscraper',
+            '[id*="banner"]', '[class*="banner"]',
+            'img[src*="banner"]',
+            'img[src$=".gif"]', 'img[src$=".swf"]'
         ];
 
         try {
@@ -149,9 +165,11 @@ function startShield() {
             const selectors = [
                 '.ad', '.ads', '.adsbygoogle', '.ad-container', '.ad-slot', '.advertisement',
                 '.sponsored', '.sponsored-content', '.promoted', '[data-ad]', '[data-adsense]',
-                '[id^="google_ads_"]', '[class*="ad-"]', '[class*="-ad"]', '[id*="-ad"]'
+                '[id^="google_ads_"]', '[class*="ad-"]', '[class*="-ad"]', '[id*="-ad"]',
+                '.banner', '.banner-ad', '[id*="banner"]', '[class*="banner"]',
+                '.leaderboard', '.skyscraper', '.sidebar-ads', '.side-ads'
             ];
-            style.textContent = selectors.join(', ') + ' { display: none !important; visibility: hidden !important; }';
+            style.textContent = selectors.join(', ') + ' { display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; }';
             (document.head || document.documentElement).appendChild(style);
         } catch (e) {
             // ignore
@@ -183,6 +201,20 @@ function startShield() {
     // Process both iframe and ad container checks together
     const processDOM = () => {
         if (!isExtensionActive || isWhitelisted) return;
+        
+        // Handle lazy-loaded banner images
+        try {
+            document.querySelectorAll('img[data-src], img[loading="lazy"]').forEach(img => {
+                try {
+                    if (img.dataset && img.dataset.thornBlocked === '1') return;
+                    const srcStr = ((img.src || '') + (img.dataset.src || '')).toLowerCase();
+                    if (/ad|banner|doubleclick|criteo|gumgum|taboola|outbrain/.test(srcStr)) {
+                        img.style.display = 'none';
+                        img.dataset.thornBlocked = '1';
+                    }
+                } catch (inner) { /* ignore */ }
+            });
+        } catch (e) { /* ignore */ }
         removeEmptyIframes();
         trackBlockedAdContainers();
     };

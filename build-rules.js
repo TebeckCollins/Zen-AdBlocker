@@ -2,19 +2,20 @@ const fs = require('fs');
 const { convertFilter } = require('@eyeo/abp2dnr');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
-// Comprehensive filter lists for effective ad and tracking blocking
-// Expanded in 1.0.1 for better coverage across common ad networks
+// Proven, stable filter sources with working URLs
+// Using official CDN mirrors that are maintained
 const LISTS = [
-    { name: 'EasyList (Main)', url: 'https://raw.githubusercontent.com/easylist/easylist/master/easylist/easylist.txt' },
-    { name: 'EasyPrivacy', url: 'https://raw.githubusercontent.com/easylist/easylist/master/easyprivacy/easyprivacy.txt' },
-    { name: 'Adservers', url: 'https://raw.githubusercontent.com/easylist/easylist/master/easylist/easylist_adservers.txt' }
+    { name: 'EasyList (Ads)', url: 'https://easylist-downloads.adblockplus.org/easylist.txt' },
+    { name: 'EasyPrivacy (Tracking)', url: 'https://easylist-downloads.adblockplus.org/easyprivacy.txt' }
 ];
 
 const OUTPUT_FILE = 'rules.json';
-const MAX_TOTAL_RULES = 29900; // Leaving a small 100-rule buffer for safety
+const MAX_TOTAL_RULES = 29900; // Chrome DNR limit
+const MAX_RULES_PER_LIST = 15000; // Distribute quota fairly
 
+// ... (keep your top imports and constants)
 async function buildMergedRules() {
-    console.log("🚀 Starting Merged Build (Comprehensive Ad + Privacy Filtering)...");
+    console.log("🚀 Starting Merged Build for Banners, Ads, and Trackers...");
 
     let dnrRules = [];
     let nextId = 1;
@@ -35,30 +36,34 @@ async function buildMergedRules() {
                     const converted = await convertFilter(trimmed);
                     if (converted && converted.length > 0) {
                         for (const rule of converted) {
-                            if (nextId <= MAX_TOTAL_RULES) {
-                                rule.id = nextId++;
-                                dnrRules.push(rule);
-                                listCount++;
+                            if (nextId > MAX_TOTAL_RULES || listCount >= MAX_RULES_PER_LIST) break;
+
+                            // BANNER AD OPTIMIZATION:
+                            // Safely extend rules to catch image-based banner ads
+                            if (!rule.condition.resourceTypes) {
+                                rule.condition.resourceTypes = ['image', 'object'];
+                            } else if (!rule.condition.resourceTypes.includes('image')) {
+                                rule.condition.resourceTypes.push('image');
                             }
+
+                            rule.id = nextId++;
+                            dnrRules.push(rule);
+                            listCount++;
                         }
                     }
                 } catch (e) { continue; }
 
-                if (nextId > MAX_TOTAL_RULES) break;
+                if (nextId > MAX_TOTAL_RULES || listCount >= MAX_RULES_PER_LIST) break;
             }
             console.log(`✅ Added ${listCount} rules from ${list.name}.`);
         } catch (error) {
             console.error(`❌ Error fetching ${list.name}:`, error.message);
         }
-
-        if (nextId > MAX_TOTAL_RULES) {
-            console.log("⚠️ Total rule limit reached. Skipping remaining lists/rules.");
-            break;
-        }
+        if (nextId > MAX_TOTAL_RULES) break;
     }
 
     fs.writeFileSync(OUTPUT_FILE, JSON.stringify(dnrRules, null, 2));
-    console.log(`\n🎉 DONE! Total rules in rules.json: ${dnrRules.length}`);
+    console.log(`\n🎉 DONE! Total rules: ${dnrRules.length}`);
 }
 
 buildMergedRules();
