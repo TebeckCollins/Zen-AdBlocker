@@ -215,136 +215,58 @@ function startShield() {
         }
     };
 
-    // Expanded and robust selectors for banner ads and common ad containers
+    // Hide banner images and their containers
+    const hideBannerImages = () => {
+        let count = 0;
+        try {
+            // Find all images with /banners/, /ads/, /ad/ paths
+            document.querySelectorAll('img[src*="/banners/"], img[src*="/ads/"], img[src*="/ad/"]').forEach(img => {
+                try {
+                    // Skip if already processed
+                    if (img.dataset && img.dataset.thornBlocked === '1') return;
+                    
+                    // Hide the image itself
+                    img.style.display = 'none';
+                    img.style.visibility = 'hidden';
+                    img.dataset.thornBlocked = '1';
+                    count++;
+                    
+                    // Also hide parent containers (div, section, aside with ad-related classes)
+                    let parent = img.closest('.include, [class*="ad-"], [id*="ad-"], [data-ad], .promo, .sponsor, .promoted');
+                    if (parent && !parent.dataset.thornBlocked) {
+                        parent.style.display = 'none';
+                        parent.style.visibility = 'hidden';
+                        parent.dataset.thornBlocked = '1';
+                    }
+                } catch (inner) { /* ignore */ }
+            });
+            if (count > 0) {
+                reportBlockedContent(count, 'banner-images');
+            }
+        } catch (e) {
+            // Silently ignore
+        }
+    };
+
+    // Specific selectors for known ad networks and containers ONLY
+    // Avoid broad patterns like [id*="ad"] which catch legitimate content
     const bannerSelectors = [
-        '[id*="ad" i]:not([id*="read"]):not([id*="head"]):not([id*="load"]):not([id*="road"]):not([id*="shadow"]):not([id*="pad"]):not([id*="mad"]):not([id*="bad"]):not([id*="glad"]):not([id*="rad"]):not([id*="lad"]):not([id*="cad"]):not([id*="dead"]):not([id*="lead"]):not([id*="bread"]):not([id*="thread"]):not([id*="spread"]):not([id*="ahead"]):not([id*="mead"]):not([id*="stead"]):not([id*="plead"]):not([id*="bead"]):not([id*="dread"]):not([id*="stead"]):not([id*="tread"]):not([id*="widespread"]):not([id*="instead"]):not([id*="misread"]):not([id*="mislead"]):not([id*="overhead"])',
-        '[class*="ad" i]:not([class*="read"]):not([class*="head"]):not([class*="load"]):not([class*="road"]):not([class*="shadow"]):not([class*="pad"]):not([class*="mad"]):not([class*="bad"]):not([class*="glad"]):not([class*="rad"]):not([class*="lad"]):not([class*="cad"]):not([class*="dead"]):not([class*="lead"]):not([class*="bread"]):not([class*="thread"]):not([class*="spread"]):not([class*="ahead"]):not([class*="mead"]):not([class*="stead"]):not([class*="plead"]):not([class*="bead"]):not([class*="dread"]):not([class*="stead"]):not([class*="tread"]):not([class*="widespread"]):not([class*="instead"]):not([class*="misread"]):not([class*="mislead"]):not([class*="overhead"])',
-        '[id*="banner" i]',
-        '[class*="banner" i]',
-        '[id*="adbanner" i]',
-        '[class*="adbanner" i]',
-        '[id*="ad-bar" i]',
-        '[class*="ad-bar" i]',
-        '[id*="adbox" i]',
-        '[class*="adbox" i]',
-        '[id*="adunit" i]',
-        '[class*="adunit" i]',
-        '[id*="adcontainer" i]',
-        '[class*="adcontainer" i]',
-        '[id*="adframe" i]',
-        '[class*="adframe" i]',
-        '[id*="adspace" i]',
-        '[class*="adspace" i]',
-        '[id*="ad-slot" i]',
-        '[class*="ad-slot" i]',
-        '[id*="ad-placement" i]',
-        '[class*="ad-placement" i]',
-        '[id*="leaderboard" i]',
-        '[class*="leaderboard" i]',
-        '[id*="top-banner" i]',
-        '[class*="top-banner" i]',
-        '[id*="bottom-banner" i]',
-        '[class*="bottom-banner" i]',
-        '[id*="sponsor" i]',
-        '[class*="sponsor" i]',
-        '[id*="advert" i]',
-        '[class*="advert" i]',
-        '[id*="adsense" i]',
-        '[class*="adsense" i]',
-        '[id*="adheader" i]',
-        '[class*="adheader" i]',
-        '[id*="adfooter" i]',
-        '[class*="adfooter" i]',
-        '[id*="adimg" i]',
-        '[class*="adimg" i]',
-        '[id*="adpic" i]',
-        '[class*="adpic" i]',
-        '[id*="adimage" i]',
-        '[class*="adimage" i]',
-        '[id*="adrow" i]',
-        '[class*="adrow" i]',
-        '[id*="adcol" i]',
-        '[class*="adcol" i]',
-        '[id*="adcell" i]',
-        '[class*="adcell" i]',
-        '[id*="adsection" i]',
-        '[class*="adsection" i]',
-        '[id*="adblocker" i]',
-        '[class*="adblocker" i]',
-        '[id*="adbar" i]',
-        '[class*="adbar" i]',
-        '[id*="adpanel" i]',
-        '[class*="adpanel" i]',
-        '[id*="adcontent" i]',
-        '[class*="adcontent" i]',
-        '[id*="admodule" i]',
-        '[class*="admodule" i]',
-        '[id*="adgroup" i]',
-        '[class*="adgroup" i]',
-        '[id*="aditem" i]',
-        '[class*="aditem" i]',
-        '[id*="adspot" i]',
-        '[class*="adspot" i]',
-        '[id*="adtag" i]',
-        '[class*="adtag" i]',
-        '[id*="sponsored" i]',
-        '[class*="sponsored" i]',
-        '[id*="promo" i]',
-        '[class*="promo" i]',
-        '[id*="promobox" i]',
-        '[class*="promobox" i]',
-        '[id*="promobanner" i]',
-        '[class*="promobanner" i]',
-        // Data attributes
-        'div[data-ad], section[data-ad], aside[data-ad], [data-ad], [data-advertisement], [data-banner], [data-adunit]',
-        // ARIA/role
-        '[role="banner" i]',
-        '[aria-label*="ad" i]',
-        '[aria-label*="banner" i]',
-        '[aria-label*="sponsor" i]',
-        '[aria-label*="advert" i]',
-        '[aria-label*="promotion" i]',
-        '[aria-label*="promo" i]',
-        '[aria-label*="ads" i]',
-        '[aria-label*="advertisement" i]',
-        '[aria-label*="sponsored" i]',
-        '[aria-label*="sponsorship" i]',
-        '[aria-label*="leaderboard" i]',
-        '[aria-label*="top-banner" i]',
-        '[aria-label*="bottom-banner" i]',
-        '[aria-label*="adheader" i]',
-        '[aria-label*="adfooter" i]',
-        '[aria-label*="adimg" i]',
-        '[aria-label*="adpic" i]',
-        '[aria-label*="adimage" i]',
-        '[aria-label*="adframe" i]',
-        '[aria-label*="adblock" i]',
-        '[aria-label*="adunit" i]',
-        '[aria-label*="adrow" i]',
-        '[aria-label*="adcol" i]',
-        '[aria-label*="adcell" i]',
-        '[aria-label*="adsection" i]',
-        '[aria-label*="adblocker" i]',
-        '[aria-label*="adbanner" i]',
-        '[aria-label*="adbar" i]',
-        '[aria-label*="adpanel" i]',
-        '[aria-label*="adcontent" i]',
-        '[aria-label*="admodule" i]',
-        '[aria-label*="adgroup" i]',
-        '[aria-label*="aditem" i]',
-        '[aria-label*="adspot" i]',
-        '[aria-label*="adtag" i]',
-        '[aria-label*="promo" i]',
-        '[aria-label*="promobox" i]',
-        '[aria-label*="promobanner" i]',
-        // Iframes and images
-        'iframe[src*="ad" i]:not([src*="read"]):not([src*="head"]):not([src*="load"]):not([src*="road"]):not([src*="shadow"]):not([src*="pad"]):not([src*="mad"]):not([src*="bad"]):not([src*="glad"]):not([src*="rad"]):not([src*="lad"]):not([src*="cad"]):not([src*="dead"]):not([src*="lead"]):not([src*="bread"]):not([src*="thread"]):not([src*="spread"]):not([src*="ahead"]):not([src*="mead"]):not([src*="stead"]):not([src*="plead"]):not([src*="bead"]):not([src*="dread"]):not([src*="stead"]):not([src*="tread"]):not([src*="widespread"]):not([src*="instead"]):not([src*="misread"]):not([src*="mislead"]):not([src*="overhead"])',
-        'img[src*="ad" i]:not([src*="read"]):not([src*="head"]):not([src*="load"]):not([src*="road"]):not([src*="shadow"]):not([src*="pad"]):not([src*="mad"]):not([src*="bad"]):not([src*="glad"]):not([src*="rad"]):not([src*="lad"]):not([src*="cad"]):not([src*="dead"]):not([src*="lead"]):not([src*="bread"]):not([src*="thread"]):not([src*="spread"]):not([src*="ahead"]):not([src*="mead"]):not([src*="stead"]):not([src*="plead"]):not([src*="bead"]):not([src*="dread"]):not([src*="stead"]):not([src*="tread"]):not([src*="widespread"]):not([src*="instead"]):not([src*="misread"]):not([src*="mislead"]):not([src*="overhead"])',
-        // Common ad image file patterns
-        'img[src$=".gif" i][src*="ad" i]',
-        'img[src$=".jpg" i][src*="ad" i]',
-        'img[src$=".png" i][src*="ad" i]',
-        // Misc
+
+        // Banner file paths - specific targeting for ad image files
+        'img[src*="/banners/"][alt=""]',     // Images in /banners/ path with empty alt (common ad indicator)
+        '.include img[src*="/banners/"]',    // Images in .include divs with /banners/ path
+        'img[src*="/ads/"][alt=""]',         // Images in /ads/ path with empty alt
+        'img[src*="/ad/"][alt=""]',          // Images in /ad/ path with empty alt
+        
+        // Data attributes - very specific only
+        'div[data-ad-type], section[data-ad-type], aside[data-ad-type]',
+        '[data-advertisement], [data-adunit]',
+        // Iframes and images - ONLY specific ad networks (DNR rules handle file blocking)
+        // Avoid broad patterns like img[src*="ad"] which break legitimate content like reddit.com thumbnails
+        'iframe[id^="google_ads_frame" i]',
+        'iframe[src*="googlesyndication.com"]',
+        'iframe[src*="doubleclick.net"]',
+        // Misc - specific ad network IDs only
         'div[id^="google_ads" i]',
         'div[id^="dfp-ad" i]',
         'div[id^="gpt-ad" i]',
@@ -373,10 +295,8 @@ function startShield() {
         'div[id^="advertpro-" i]',
         'div[id^="adview-" i]',
         'div[id^="adwords-" i]',
-        'div[id^="adzerk-" i]',
         'div[id^="adx-" i]',
         'div[id^="ads-" i]',
-        'div[id^="adsense-" i]',
         'div[id^="adslot-" i]',
         'div[id^="adunit-" i]',
         'div[id^="adzone-" i]',
@@ -386,11 +306,6 @@ function startShield() {
         'div[id^="promotion-" i]',
         'div[id^="promobox-" i]',
         'div[id^="promobanner-" i]',
-        // Ad containers with fixed/absolute position
-        'div[style*="position:fixed" i][id*="ad" i]',
-        'div[style*="position:absolute" i][id*="ad" i]',
-        'div[style*="position:fixed" i][class*="ad" i]',
-        'div[style*="position:absolute" i][class*="ad" i]',
     ];
 
     // CSS to inject for early hiding of banner ads (expanded for robustness)
@@ -416,26 +331,16 @@ ${bannerSelectors.join(",\n")} {
     filter: none !important;
     transition: none !important;
 }
-iframe[width][height][src*="ad" i],
-iframe[width][height][src*="banner" i] {
+iframe[width][height][src*="googlesyndication.com"],
+iframe[width][height][src*="doubleclick.net"] {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
     pointer-events: none !important;
     z-index: -9999 !important;
 }
-img[src*="ad" i],
-img[alt*="ad" i],
-img[title*="ad" i],
-img[src*="banner" i],
-img[alt*="banner" i],
-img[title*="banner" i] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    z-index: -9999 !important;
-}
+/* Remove overly broad img selectors to avoid blocking legitimate images */
+/* Let DNR rules.json handle file-level blocking instead */
 `;
 
     const injectHideStyles = () => {
@@ -476,6 +381,7 @@ img[title*="banner" i] {
     const processDOM = () => {
         if (!isExtensionActive || isWhitelisted) return;
         removeEmptyIframes();
+        hideBannerImages();
         trackBlockedAdContainers();
     };
 
